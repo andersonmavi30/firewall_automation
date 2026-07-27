@@ -1,0 +1,17 @@
+---
+plugin: netbox.netbox.nb_inventory
+
+validate_certs: false
+config_context: true
+interfaces: true
+plurals: false
+
+group_by:
+  - site
+  - role
+  - platform
+
+device_query_filters:
+  - status: active
+  - has_primary_ip: "true"
+  - platform: fortios

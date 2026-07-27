@@ -1,0 +1,30 @@
+# Credenciales y variables sensibles
+*.env
+.env
+*.vault
+vault.yml
+secrets.yml
+
+# Tokens y claves
+*.pem
+*.key
+*.crt
+credentials/
+
+# Backups generados
+artifacts/backups/*
+!artifacts/backups/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Ansible
+*.retry
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
