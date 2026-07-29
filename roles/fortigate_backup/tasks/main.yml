@@ -1,0 +1,49 @@
+---
+- name: Validar token REST del FortiGate
+  ansible.builtin.assert:
+    that:
+      - fortios_access_tokens is defined
+      - inventory_hostname in fortios_access_tokens
+      - fortios_access_tokens[inventory_hostname] | length > 0
+    fail_msg: "No existe token REST para {{ inventory_hostname }}"
+  no_log: true
+
+- name: Crear directorio local de backups
+  ansible.builtin.file:
+    path: "{{ fortios_backup_root }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+
+- name: Obtener configuracion completa del FortiGate
+  fortinet.fortios.fortios_monitor:
+    access_token: "{{ fortios_access_tokens[inventory_hostname] }}"
+    vdom: "{{ fortios_vdom }}"
+    selector: backup.system.config
+    params:
+      scope: "{{ fortios_backup_scope }}"
+  register: fortios_backup_result
+  no_log: true
+
+- name: Validar contenido recibido desde FortiGate
+  ansible.builtin.assert:
+    that:
+      - fortios_backup_result.meta is defined
+      - fortios_backup_result.meta.raw is defined
+      - fortios_backup_result.meta.raw | length > 0
+    fail_msg: >-
+      El FortiGate {{ inventory_hostname }}
+      no devolvio una configuracion valida.
+
+- name: Guardar configuracion en archivo
+  ansible.builtin.copy:
+    content: "{{ fortios_backup_result.meta.raw }}"
+    dest: "{{ fortios_backup_root }}/{{ fortios_backup_filename }}"
+    mode: "0600"
+  delegate_to: localhost
+
+- name: Mostrar archivo generado
+  ansible.builtin.debug:
+    msg: >-
+      Backup de {{ inventory_hostname }} guardado en
+      {{ fortios_backup_root }}/{{ fortios_backup_filename }}
