@@ -1,0 +1,16 @@
+---
+- name: Backup automatico de configuracion FortiGate
+  hosts: platform_fortios
+  gather_facts: false
+  serial: 1
+
+  vars:
+    ansible_connection: httpapi
+    ansible_network_os: fortinet.fortios.fortios
+    ansible_httpapi_use_ssl: true
+    ansible_httpapi_validate_certs: false
+    ansible_httpapi_port: 443
+    fortios_vdom: root
+
+  roles:
+    - role: fortigate_backup

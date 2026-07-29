@@ -1,0 +1,10 @@
+---
+fortios_backup_scope: global
+
+fortios_backup_root: "{{ playbook_dir }}/../artifacts/backups"
+
+fortios_backup_timestamp: >-
+  {{ now(utc=true, fmt='%Y%m%dT%H%M%SZ') }}
+
+fortios_backup_filename: >-
+  {{ inventory_hostname }}_{{ fortios_backup_timestamp }}.conf
