@@ -12,5 +12,8 @@
     ansible_httpapi_port: 80
     fortios_vdom: root
 
+    ansible_httpapi_session_key:
+      access_token: "{{ fortios_access_tokens[inventory_hostname] | trim }}"
+
   roles:
     - role: fortigate_backup
