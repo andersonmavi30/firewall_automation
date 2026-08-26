@@ -23,6 +23,7 @@ Repositorio alojado en GitLab (`gitlab.com/andersonmavi30/firewall-network-autom
 ## Estructura del repositorio
 
 ```
+README.md / README.es.md             # Documentación principal bilingüe (inglés / español)
 ansible.cfg                          # Config Ansible: inventario NetBox, roles_path, collections_path
 collections/requirements.yml         # Colecciones Ansible requeridas
 requirements.txt                     # Dependencias Python
@@ -79,7 +80,7 @@ ansible-playbook playbooks/01_fortigate_backup.yml \
 
 ## Convenciones de código
 
-- **Idioma**: el contenido del proyecto (nombres de plays/tasks, mensajes, docstrings, comentarios de `.gitignore`) está en **español**; mantener ese idioma en el código nuevo. Los mensajes de commit usan Conventional Commits en inglés (`feat:`, `fix:`).
+- **Idioma**: el contenido del proyecto (nombres de plays/tasks, mensajes, docstrings, comentarios de `.gitignore`) está en **español**; mantener ese idioma en el código nuevo. Excepción: la documentación principal es bilingüe — `README.md` en inglés con enlace a `README.es.md` en español; ambos deben mantenerse sincronizados. Los mensajes de commit usan Conventional Commits en inglés (`feat:`, `fix:`).
 - **Ansible**: YAML con documento `---` inicial, módulos con FQCN (`ansible.builtin.*`, `fortinet.fortios.*`), nombres de playbooks numerados con prefijo (`01_...`), roles con estructura estándar (`defaults/`, `tasks/`, `templates/`). Los defaults del rol llevan el prefijo `fortios_backup_`.
 - **Python**: `#!/usr/bin/env python3`, type hints (`dict[str, Any]`, `| None`), docstrings en español, scripts idempotentes estilo "ensure" (buscar por filtros → crear o hacer PATCH), validación de variables de entorno al inicio con `sys.exit(1)` si faltan.
 - **Discrepancia conocida**: `group_vars/all.yml` define conexión https/443, pero `playbooks/01_fortigate_backup.yml` la sobreescribe a http/80 sin SSL. Al crear playbooks nuevos, decidir explícitamente qué valor aplica.

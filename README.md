@@ -1,93 +1,112 @@
-# firewall-network-automation
+# Firewall Network Automation
 
+**English** | [Español](README.es.md)
 
+NetDevOps proof of concept for firewall automation, using **NetBox as the source of truth** and **Ansible as the execution engine**.
 
-## Getting started
+The repository currently automates **Fortinet FortiGate** configuration backups through the FortiOS REST API. It is designed to grow into a multi-vendor automation project that will also support **Palo Alto Networks (PAN-OS)** and **Check Point (Gaia / Management API)**.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Vendor support
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+| Vendor | Platform | Status | Automation |
+| --- | --- | --- | --- |
+| Fortinet | FortiOS | Available | Full configuration backup via `fortinet.fortios.fortios_monitor` |
+| Palo Alto Networks | PAN-OS | Planned | Configuration backup and operational tasks via `paloaltonetworks.panos` |
+| Check Point | Gaia / Management API | Planned | Configuration backup and policy tasks via `check_point.mgmt` |
 
-## Add your files
+## How it works
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+1. **NetBox bootstrap** — Python scripts in `scripts/netbox/` create the lab inventory in NetBox through its REST API: the `FortiOS` platform, the `Fortinet` manufacturer, the `firewall` device role, the lab site, the `FortiGate VM` device type, and the lab firewalls with their interfaces and IP addresses.
+2. **Dynamic inventory** — Ansible builds its inventory from NetBox with the `netbox.netbox.nb_inventory` plugin (`inventories/netbox/netbox_inventory.yml`). Devices are grouped by site, role, and platform, and only active devices with a primary IP and the `fortios` platform are included.
+3. **Backup execution** — `playbooks/01_fortigate_backup.yml` runs the `fortigate_backup` role against the `platform_fortios` group, one firewall at a time (`serial: 1`). The role validates the REST access token, downloads the full configuration (`backup.system.config`), and stores it locally in `artifacts/backups/` with a UTC timestamp.
+
+Backups are written on the Ansible control node with restrictive permissions (`0700` directory, `0600` files), and tasks that handle tokens use `no_log: true`.
+
+## Repository layout
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/andersonmavi30/firewall-network-automation.git
-git branch -M main
-git push -uf origin main
+ansible.cfg                          # Ansible configuration: NetBox inventory, roles and collections paths
+collections/requirements.yml         # Required Ansible collections (netbox.netbox, fortinet.fortios)
+requirements.txt                     # Python dependencies
+.env.example                         # Template for NETBOX_API and NETBOX_TOKEN
+inventories/netbox/
+  netbox_inventory.yml               # NetBox dynamic inventory plugin configuration
+  group_vars/all.yml                 # Default FortiOS httpapi connection settings (https/443)
+playbooks/
+  01_fortigate_backup.yml            # FortiGate backup playbook (overrides connection to http/80)
+roles/fortigate_backup/
+  defaults/main.yml                  # Backup scope, destination path and timestamped filename
+  tasks/main.yml                     # Token validation, config download and local save
+  templates/backup_report.j2         # Placeholder for a future backup report
+scripts/netbox/
+  bootstrap_fortios_platform.py      # Ensures the FortiOS platform exists in NetBox
+  bootstrap_firewall_lab.py          # Loads the FortiGate lab into NetBox (idempotent)
+  get_fortigates.py                  # Placeholder for a future query utility
+artifacts/backups/                   # Backup output directory (gitignored)
 ```
 
-## Integrate with your tools
+## Requirements
 
-* [Set up project integrations](https://gitlab.com/andersonmavi30/firewall-network-automation/-/settings/integrations)
+- Python 3 with the packages in `requirements.txt`.
+- Ansible core with the collections in `collections/requirements.yml`.
+- A reachable NetBox instance and an API token with write permissions for the bootstrap scripts.
+- FortiGate REST API access tokens, one per firewall.
+- Optional: AWX, using this repository as the project source.
 
-## Collaborate with your team
+## Quick start
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+# Create and activate a virtual environment
+python3 -m venv .venv && source .venv/bin/activate
 
-## Test and Deploy
+# Install Python and Ansible dependencies
+pip install -r requirements.txt
+ansible-galaxy collection install -r collections/requirements.yml
 
-Use the built-in continuous integration in GitLab.
+# Configure NetBox credentials
+cp .env.example .env   # then edit the values
+set -a; source .env; set +a
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+# Bootstrap NetBox (the platform must exist before the lab)
+python scripts/netbox/bootstrap_fortios_platform.py
+python scripts/netbox/bootstrap_firewall_lab.py
 
-***
+# Verify the dynamic inventory
+ansible-inventory --graph
 
-# Editing this README
+# Run the FortiGate backup
+ansible-playbook playbooks/01_fortigate_backup.yml \
+  -e '{"fortios_access_tokens": {"FortiGate_A": "<token>", "FortiGate_B": "<token>"}}'
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Backups are stored as `artifacts/backups/<hostname>_<UTC timestamp>.conf`.
 
-## Suggestions for a good README
+## Configuration and secrets
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- `NETBOX_API` / `NETBOX_TOKEN`: required by the NetBox scripts and the dynamic inventory.
+- `fortios_access_tokens`: dictionary mapping `hostname -> REST token`. It is **not** stored in the repository; inject it with `--extra-vars`, Ansible Vault, or AWX credentials. The role fails fast if a token is missing.
+- `fortios_backup_scope`, `fortios_backup_root` and `fortios_backup_filename`: role defaults controlling the backup scope, destination and naming.
+- Real `.env` files, vault files, keys and generated backups are excluded through `.gitignore`. The GitLab pipeline runs Secret Detection.
+- Known discrepancy: `inventories/netbox/group_vars/all.yml` defines `https/443`, while `playbooks/01_fortigate_backup.yml` overrides the connection to `http/80` without certificate validation. Choose the connection settings deliberately when adding new playbooks.
 
-## Name
-Choose a self-explaining name for your project.
+## Verification
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+There is no automated test or lint pipeline yet. Validate changes manually with:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```bash
+ansible-playbook --syntax-check playbooks/01_fortigate_backup.yml
+ansible-inventory --graph
+python -m py_compile scripts/netbox/*.py
+```
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+
+- Implement the pending placeholders: `scripts/netbox/get_fortigates.py` and `roles/fortigate_backup/templates/backup_report.j2`.
+- Add Ansible lint and playbook syntax checks to CI.
+- Add **Palo Alto Networks PAN-OS** support: NetBox platform bootstrap, inventory filters, and a backup role based on `paloaltonetworks.panos`.
+- Add **Check Point** support: NetBox platform bootstrap, inventory filters, and a backup role based on `check_point.mgmt`.
+- Define a shared backup contract (input variables, output layout and reporting) so all vendors produce consistent artifacts.
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Changes are integrated through merge requests to `main` from `feature/...` branches. Commit messages follow Conventional Commits in English (`feat:`, `fix:`, ...). Project content (play and task names, messages, docstrings) is written in Spanish; this README is the bilingual exception.
