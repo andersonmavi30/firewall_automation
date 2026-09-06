@@ -1,6 +1,6 @@
 # Firewall Network Automation
 
-**English** | [Español](README.es.md)
+🇨🇴 [Español](README.es.md)
 
 NetDevOps proof of concept for firewall automation, using **NetBox as the source of truth** and **Ansible as the execution engine**.
 
