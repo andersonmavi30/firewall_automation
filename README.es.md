@@ -107,6 +107,10 @@ python -m py_compile scripts/netbox/*.py
 - Agregar soporte para **Check Point**: bootstrap de la plataforma en NetBox, filtros de inventario y un rol de backup basado en `check_point.mgmt`.
 - Definir un contrato de backup común (variables de entrada, estructura de salida y reportes) para que todos los vendors produzcan artefactos consistentes.
 
+## 📄 Licencia
+
+Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
+
 ## Contribuciones
 
 Los cambios se integran mediante merge requests a `main` desde ramas `feature/...`. Los mensajes de commit siguen Conventional Commits en inglés (`feat:`, `fix:`, ...). El contenido del proyecto (nombres de plays y tasks, mensajes, docstrings) está en español; este README es la excepción bilingüe.
